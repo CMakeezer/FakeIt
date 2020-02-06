@@ -13,7 +13,7 @@ namespace fakeit {
         friend class SequenceVerificationProgress;
 
         ~SequenceVerificationExpectation() THROWS {
-            if (std::uncaught_exception()) {
+            if (UncaughtException()) {
                 return;
             }
             VerifyExpectation(_fakeit);
@@ -104,12 +104,12 @@ namespace fakeit {
             return !isAtLeastVerification();
         }
 
-        bool atLeastLimitNotReached(int count) {
-            return count < -_expectedCount;
+        bool atLeastLimitNotReached(int actualCount) {
+            return actualCount < -_expectedCount;
         }
 
-        bool exactLimitNotMatched(int count) {
-            return count != _expectedCount;
+        bool exactLimitNotMatched(int actualCount) {
+            return actualCount != _expectedCount;
         }
 
         void handleExactVerificationEvent(VerificationEventHandler &verificationErrorHandler,

@@ -3,7 +3,11 @@
 #include "fakeit/DefaultFakeit.hpp"
 #include "fakeit/EventHandler.hpp"
 #include "mockutils/to_string.hpp"
-#include "catch.hpp"
+#if __has_include("catch2/catch.hpp")
+#   include "catch2/catch.hpp"
+#else
+#   include "catch.hpp"
+#endif
 
 namespace fakeit {
 
@@ -87,12 +91,13 @@ namespace fakeit {
                 std::string fomattedMessage,
                 Catch::ResultWas::OfType resultWas = Catch::ResultWas::OfType::ExpressionFailed ){
             Catch::AssertionHandler catchAssertionHandler( vetificationType, sourceLineInfo, failingExpression, Catch::ResultDisposition::Normal );
-            INTERNAL_CATCH_TRY( catchAssertionHandler ) { \
+            INTERNAL_CATCH_TRY { \
                 CATCH_INTERNAL_SUPPRESS_PARENTHESES_WARNINGS \
-                catchAssertionHandler.handle( resultWas , fomattedMessage); \
+                catchAssertionHandler.handleMessage(resultWas, fomattedMessage); \
                 CATCH_INTERNAL_UNSUPPRESS_PARENTHESES_WARNINGS \
-            } INTERNAL_CATCH_CATCH( catchAssertionHandler ) \
-            INTERNAL_CATCH_REACT( catchAssertionHandler )
+            } INTERNAL_CATCH_CATCH(catchAssertionHandler) { \
+                INTERNAL_CATCH_REACT(catchAssertionHandler) \
+            }
         }
 
         virtual void handle(const UnexpectedMethodCallEvent &evt) override {

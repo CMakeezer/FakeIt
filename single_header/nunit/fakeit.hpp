@@ -2,12 +2,13 @@
 /*
  *  FakeIt - A Simplified C++ Mocking Framework
  *  Copyright (c) Eran Pe'er 2013
- *  Generated: 2019-06-01 12:15:07.986646
+ *  Generated: 2018-08-17 00:22:19.101508
  *  Distributed under the MIT License. Please refer to the LICENSE file at:
  *  https://github.com/eranpeer/FakeIt
  */
 
-
+#ifndef fakeit_h__
+#define fakeit_h__
 
 
 
@@ -982,19 +983,7 @@ namespace fakeit {
         }
     };
 }
-#include <exception>
-
-
 namespace fakeit {
-#if __cplusplus >= 201703L
-    inline bool UncaughtException () {
-        return std::uncaught_exceptions() >= 1;
-    }
-#else
-    inline bool UncaughtException () {
-      return std::uncaught_exception();
-    }
-#endif
 
     struct FakeitException {
         std::exception err;
@@ -1116,139 +1105,69 @@ namespace fakeit {
 
     };
 }
-#include <string>
-#include <sstream>
-#include <iomanip>
 
 namespace fakeit {
 
-    template<typename T>
-    static std::string to_string(const T &n) {
-        std::ostringstream stm;
-        stm << n;
-        return stm.str();
-    }
+	struct NUnitAdapter : public EventHandler {
+		virtual ~NUnitAdapter() = default;
 
-}
+		NUnitAdapter(EventFormatter &formatter)
+			: _formatter(formatter) {
+		}
 
-namespace fakeit {
+		virtual void handle(const UnexpectedMethodCallEvent &evt) override {
+			std::string format = _formatter.format(evt);
+			NUnit::Framework::Assert::Fail(gcnew String(format.c_str()));
+		}
 
-    struct VerificationException : public std::exception {
-        virtual ~VerificationException() NO_THROWS{};
+		virtual void handle(const SequenceVerificationEvent &evt) override {
+			std::string format(_formatter.format(evt));
 
-        VerificationException(std::string format) :
-            _format(format) {
-        }
 
-        friend std::ostream &operator<<(std::ostream &os, const VerificationException &val) {
-            os << val.what();
-            return os;
-        }
+			NUnit::Framework::Assert::Fail(gcnew String(format.c_str()));
+	        }
 
-        void setFileInfo(std::string aFile, int aLine, std::string aCallingMethod) {
-            _file = aFile;
-            _callingMethod = aCallingMethod;
-            _line = aLine;
-        }
+		virtual void handle(const NoMoreInvocationsVerificationEvent &evt) override {
+			std::string format = _formatter.format(evt);
 
-        const std::string& file() const {
-            return _file;
-        }
-        int line() const {
-            return _line;
-        }
-        const std::string& callingMethod() const {
-            return _callingMethod;
-        }
 
-        const char* what() const NO_THROWS override{
-            return _format.c_str();
-        }
-    private:
-        std::string _file;
-        int _line;
-        std::string _callingMethod;
-        std::string _format;
-    };
+			NUnit::Framework::Assert::Fail(gcnew String(format.c_str()));
+	        }
 
-    struct NoMoreInvocationsVerificationException : public VerificationException {
-        NoMoreInvocationsVerificationException(std::string format) :
-            VerificationException(format) {
-        }
-    };
+	private:
+		EventFormatter &_formatter;
+	};
 
-    struct SequenceVerificationException : public VerificationException {
-        SequenceVerificationException(std::string format) :
-            VerificationException(format) {
-        }
-    };
-
-    struct StandaloneAdapter : public EventHandler {
-
-        std::string formatLineNumner(std::string file, int num){
-#ifndef __GNUG__
-            return file + std::string("(") + fakeit::to_string(num) + std::string(")");
-#else
-            return file + std::string(":") + fakeit::to_string(num);
-#endif
-        }
-
-        virtual ~StandaloneAdapter() = default;
-
-        StandaloneAdapter(EventFormatter &formatter)
-            : _formatter(formatter) {
-        }
-
-        virtual void handle(const UnexpectedMethodCallEvent &evt) override {
-            std::string format = _formatter.format(evt);
-            UnexpectedMethodCallException ex(format);
-            throw ex;
-        }
-
-        virtual void handle(const SequenceVerificationEvent &evt) override {
-            std::string format(formatLineNumner(evt.file(), evt.line()) + ": " + _formatter.format(evt));
-            SequenceVerificationException e(format);
-            e.setFileInfo(evt.file(), evt.line(), evt.callingMethod());
-            throw e;
-        }
-
-        virtual void handle(const NoMoreInvocationsVerificationEvent &evt) override {
-            std::string format(formatLineNumner(evt.file(), evt.line()) + ": " + _formatter.format(evt));
-            NoMoreInvocationsVerificationException e(format);
-            e.setFileInfo(evt.file(), evt.line(), evt.callingMethod());
-            throw e;
-        }
-
-    private:
-        EventFormatter &_formatter;
-    };
-
-    class StandaloneFakeit : public DefaultFakeit {
+    class NUnitFakeit : public DefaultFakeit {
 
     public:
-        virtual ~StandaloneFakeit() = default;
+        virtual ~NUnitFakeit() = default;
 
-        StandaloneFakeit() : _standaloneAdapter(*this) {
+        NUnitFakeit(): _nUnitAdapter(*this) {
         }
 
-        static StandaloneFakeit &getInstance() {
-            static StandaloneFakeit instance;
+        static NUnitFakeit &getInstance() {
+            static NUnitFakeit instance;
             return instance;
         }
 
     protected:
 
         fakeit::EventHandler &accessTestingFrameworkAdapter() override {
-            return _standaloneAdapter;
+            return _nUnitAdapter;
         }
 
     private:
 
-        StandaloneAdapter _standaloneAdapter;
+        NUnitAdapter _nUnitAdapter;
     };
 }
 
-static fakeit::DefaultFakeit& Fakeit = fakeit::StandaloneFakeit::getInstance();
+
+static fakeit::DefaultFakeit& Fakeit = fakeit::NUnitFakeit::getInstance();
+
+
+static fakeit::MethodInfo& scopeFixer = fakeit::UnknownMethod::instance();
 
 
 #include <type_traits>
@@ -5807,7 +5726,6 @@ namespace fakeit {
 
 #ifdef __GNUG__
 #ifndef __clang__
-#pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
 #endif
 #endif
@@ -8852,6 +8770,20 @@ namespace fakeit {
         }
     };
 }
+#include <string>
+#include <sstream>
+#include <iomanip>
+
+namespace fakeit {
+
+    template<typename T>
+    static std::string to_string(const T &n) {
+        std::ostringstream stm;
+        stm << n;
+        return stm.str();
+    }
+
+}
 
 
 namespace fakeit {
@@ -9358,3 +9290,5 @@ namespace fakeit {
 #define When(call) \
     When(call)
 
+
+#endif

@@ -7,11 +7,13 @@
  */
 #pragma once
 
+#undef max
 #include <functional>
 #include <type_traits>
 #include <vector>
 #include <array>
 #include <new>
+#include <limits>
 
 #include "mockutils/VirtualTable.hpp"
 #include "mockutils/union_cast.hpp"
@@ -43,6 +45,10 @@ namespace fakeit {
                 std::vector<std::shared_ptr<Destructible>> &methodMocks,
                 std::vector<unsigned int> &offsets) :
                 _methodMocks(methodMocks), _offsets(offsets) {
+			for (std::vector<unsigned int>::iterator it = _offsets.begin(); it != _offsets.end(); ++it)
+			{
+				*it = std::numeric_limits<int>::max();
+			}
         }
 
         Destructible *getInvocatoinHandlerPtrById(unsigned int id) override {
